@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from 'react';
-import videoSrc from '../assets/Video.mp4';
 
 export default function VideoPlayer() {
   const videoContainerRef = useRef(null);
@@ -14,13 +13,14 @@ export default function VideoPlayer() {
   const [wasPaused, setWasPaused] = useState(true);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [volumeLevel, setVolumeLevel] = useState('high');
-  const [captionsVisible, setCaptionsVisible] = useState(false);
+  const [isPaused, setIsPaused] = useState(true);
+
+  const videoUrl = "https://xn----8sbbdcswqh2clm4frcf.xn--p1ai/Video.mp4";
 
   useEffect(() => {
     const video = videoRef.current;
-    const captions = video.textTracks[0];
-    captions.mode = 'hidden';
-
+    const handlePlay = () => setIsPaused(false);
+    const handlePause = () => setIsPaused(true);
     const handleLoadedData = () => {
       totalTimeRef.current.textContent = formatDuration(video.duration);
     };
@@ -36,12 +36,15 @@ export default function VideoPlayer() {
       volumeSliderRef.current.value = volume;
       setVolumeLevel(video.muted || volume === 0 ? 'muted' : volume >= 0.5 ? 'high' : 'low');
     };
-
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
     video.addEventListener('loadeddata', handleLoadedData);
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('volumechange', handleVolumeChange);
 
     return () => {
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
       video.removeEventListener('loadeddata', handleLoadedData);
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('volumechange', handleVolumeChange);
@@ -62,7 +65,13 @@ export default function VideoPlayer() {
 
   const togglePlay = () => {
     const video = videoRef.current;
-    video.paused ? video.play() : video.pause();
+    if (video.paused) {
+      setIsPaused(false);  
+      video.play();
+    } else {
+      setIsPaused(true);  
+      video.pause();
+    }
   };
 
   const toggleFullScreenMode = () => {
@@ -84,14 +93,6 @@ export default function VideoPlayer() {
     } else {
       video.requestPictureInPicture();
     }
-  };
-
-  const toggleCaptions = () => {
-    const video = videoRef.current;
-    const captions = video.textTracks[0];
-    const isHidden = captions.mode === 'hidden';
-    captions.mode = isHidden ? 'showing' : 'hidden';
-    setCaptionsVisible(isHidden);
   };
 
   const changePlaybackSpeed = () => {
@@ -117,7 +118,10 @@ export default function VideoPlayer() {
     const rect = timelineContainerRef.current.getBoundingClientRect();
     const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width;
     const previewImgNumber = Math.max(1, Math.floor((percent * videoRef.current.duration) / 10));
-    const previewImgSrc = `../assets/previewImgs/preview${previewImgNumber}.jpg`;
+    const previewImgSrc = `/previewImgs/thumbnail-${previewImgNumber}.jpg`;
+
+    console.log(previewImgSrc);
+
     previewImgRef.current.src = previewImgSrc;
     timelineContainerRef.current.style.setProperty('--preview-position', percent);
 
@@ -164,33 +168,31 @@ export default function VideoPlayer() {
         </div>
         <div className="controls">
           <button className="play-pause-btn" onClick={togglePlay}>
-            <svg className="play-icon" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
-            </svg>
-            <svg className="pause-icon" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
-            </svg>
+            {isPaused ? (
+              <svg className="play-icon" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+              </svg>
+            ) : (
+              <svg className="pause-icon" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
+              </svg>
+            )}
           </button>
           <div className="volume-container">
             <button className="mute-btn" onClick={toggleMute}>
-              <svg className="volume-high-icon" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"
-                />
-              </svg>
-              <svg className="volume-low-icon" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z"
-                />
-              </svg>
-              <svg className="volume-muted-icon" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"
-                />
-              </svg>
+              {volumeLevel === 'high' ? (
+                <svg viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M14,3.23V20.77L7,15.54H3V8.46H7M16.5,12A4.5,4.5 0 0,0 14,8.65V15.35A4.5,4.5 0 0,0 16.5,12M14,3.23V20.77L7,15.54H3V8.46H7M19,12A7,7 0 0,0 16.5,4.5V19.5A7,7 0 0,0 19,12Z" />
+                </svg>
+              ) : volumeLevel === 'low' ? (
+                <svg viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M14,3.23V20.77L7,15.54H3V8.46H7M16.5,12A4.5,4.5 0 0,0 14,8.65V15.35A4.5,4.5 0 0,0 16.5,12M19,12A7,7 0 0,0 16.5,4.5V19.5A7,7 0 0,0 19,12Z" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M14,3.23V20.77L7,15.54H3V8.46H7M16.5,12A4.5,4.5 0 0,0 14,8.65V15.35A4.5,4.5 0 0,0 16.5,12Z" />
+                </svg>
+              )}
             </button>
             <input
               ref={volumeSliderRef}
@@ -198,70 +200,37 @@ export default function VideoPlayer() {
               type="range"
               min="0"
               max="1"
-              step="any"
+              step="0.05"
               defaultValue="1"
               onInput={handleVolumeInputChange}
             />
           </div>
           <div className="duration-container">
-            <div ref={currentTimeRef} className="current-time">
-              0:00
-            </div>
-            /
-            <div ref={totalTimeRef} className="total-time"></div>
+            <div ref={currentTimeRef} className="current-time">0:00</div>
+            <div className="total-time"> / </div>
+            <div ref={totalTimeRef} className="total-time">0:00</div>
           </div>
-          <button className="captions-btn" onClick={toggleCaptions}>
-            <svg viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"
-              />
-            </svg>
-          </button>
-          <button className="speed-btn wide-btn" onClick={changePlaybackSpeed}>
+          <button className="speed-btn" onClick={changePlaybackSpeed}>
             {playbackSpeed}x
           </button>
           <button className="mini-player-btn" onClick={toggleMiniPlayerMode}>
             <svg viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-10-7h9v6h-9z"
-              />
+              <path fill="currentColor" d="M19 13H13V19H19M19 3H5C3.89 3 3 3.89 3 5V19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.89 20.1 3 19 3Z" />
             </svg>
           </button>
           <button className="theater-btn" onClick={toggleTheaterMode}>
-            <svg className="tall" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"
-              />
-            </svg>
-            <svg className="wide" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z"
-              />
+            <svg viewBox="0 0 24 24">
+              <path fill="currentColor" d="M4,20H14V18H4V20M4,14H20V12H4V14M4,6V8H20V6H4Z" />
             </svg>
           </button>
           <button className="full-screen-btn" onClick={toggleFullScreenMode}>
-            <svg className="open" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
-              />
-            </svg>
-            <svg className="close" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"
-              />
+            <svg viewBox="0 0 24 24">
+              <path fill="currentColor" d="M4,4H9V2H4A2,2 0 0,0 2,4V9H4V4M20,4H15V2H20A2,2 0 0,1 22,4V9H20V4M20,20H15V22H20A2,2 0 0,0 22,20V15H20V20M4,15H2V20A2,2 0 0,0 4,22H9V20H4V15Z" />
             </svg>
           </button>
         </div>
       </div>
-      <video ref={videoRef} src={videoSrc}>
-        <track kind="captions" srclang="en" src="assets/subtitles.vtt" />
-      </video>
+      <video ref={videoRef} src={videoUrl} onClick={togglePlay}></video>
     </div>
   );
 }

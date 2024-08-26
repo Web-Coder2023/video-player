@@ -1,7 +1,7 @@
 import React from "react";
 import VideoPlayer from "./components/VideoPlayer.jsx";
 
-import "./App.css";
+import "./VideoPlayer.css";
 
 const App = () => {
   return (
